@@ -25,6 +25,7 @@ import { SettingsPage } from "@/components/pages/settings-page";
 import { SetupWizard } from "@/components/modals/setup-wizard";
 import { Palette } from "@/components/modals/palette";
 import { TweaksPanel, DEFAULT_TWEAKS, ACCENTS, type Tweaks } from "@/components/modals/tweaks-panel";
+import { ShortcutsHelp } from "@/components/modals/shortcuts-help";
 
 const SAMPLES: Sample[] = [
   { tag: "TODO", text: "A todo app with lists, priorities, and due dates" },
@@ -72,6 +73,7 @@ export function AppRoot() {
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [tweaksOpen, setTweaksOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [tweaks, setTweaks] = useState<Tweaks>(DEFAULT_TWEAKS);
   const setTweak = <K extends keyof Tweaks>(k: K, v: Tweaks[K]) =>
     setTweaks((prev) => ({ ...prev, [k]: v }));
@@ -238,12 +240,17 @@ export function AppRoot() {
   // Global shortcuts
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      const inField = tag === "input" || tag === "textarea";
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setPaletteOpen(true);
       } else if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
         setSbCollapsed((c) => !c);
+      } else if (!inField && e.key === "?" && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setHelpOpen(true);
       }
     };
     window.addEventListener("keydown", h);
@@ -378,6 +385,7 @@ export function AppRoot() {
       </div>
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} onNavigate={(id) => setRoute(id)} />}
       {tweaksOpen && <TweaksPanel tweaks={tweaks} setTweak={setTweak} onClose={() => setTweaksOpen(false)} />}
+      {helpOpen && <ShortcutsHelp onClose={() => setHelpOpen(false)} />}
       {toast && (
         <div className={`toast ${/fail|error|halted/i.test(toast) ? "error" : ""}`}>
           <span className="d" />

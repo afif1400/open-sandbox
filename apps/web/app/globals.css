@@ -620,6 +620,22 @@ kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); 
 .setup-card button.ghost { padding: 10px 16px; color: var(--text-2); font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
 .setup-card button.ghost:hover { color: var(--text); }
 
+/* Shortcuts help */
+.help-ov { position: fixed; inset: 0; z-index: 97; background: oklch(10% 0.005 60 / 0.65); backdrop-filter: blur(8px); display: grid; place-items: center; animation: fade 0.2s; }
+.help-card { width: 460px; max-width: calc(100vw - 32px); background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--r-lg); padding: 22px 24px 24px; box-shadow: 0 40px 80px -20px oklch(0% 0 0 / 0.5); }
+.help-card .eyebrow { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 18px; }
+.help-card .eyebrow span { color: var(--text-2); }
+.help-card .help-close { margin-left: auto; color: var(--text-3); font-size: 14px; padding: 4px 8px; border-radius: var(--r-sm); }
+.help-card .help-close:hover { color: var(--text); background: var(--surface); }
+.help-grp { margin-bottom: 14px; }
+.help-grp:last-child { margin-bottom: 0; }
+.help-grp-title { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); margin-bottom: 8px; }
+.help-rows { display: flex; flex-direction: column; gap: 4px; }
+.help-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.help-row:last-child { border-bottom: 0; }
+.help-label { font-size: 13px; color: var(--text-2); }
+.help-keys { display: flex; gap: 3px; }
+
 /* Cmd palette */
 .palette-ov { position: fixed; inset: 0; z-index: 95; background: oklch(10% 0.005 60 / 0.6); backdrop-filter: blur(6px); display: grid; place-items: flex-start; padding-top: 15vh; }
 .palette { width: 560px; max-width: calc(100vw - 32px); margin: 0 auto; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 50px 100px -20px oklch(0% 0 0 / 0.5); }
