@@ -747,3 +747,52 @@ textarea:focus-visible, input:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ========================================================================
+   Responsive — narrow viewport layout
+   Desktop-first: ≥1280 keeps the original 3-pane shell. Below that we
+   progressively simplify down to tablet/narrow viewports.
+   ======================================================================== */
+
+/* Auto-collapse sidebar below 1100px (visual only; JS state untouched) */
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 56px 1fr; }
+  .shell .sb-top .name,
+  .shell .sb-section,
+  .shell .sb-nav .lbl,
+  .shell .sb-bottom .detail,
+  .shell .proj-info,
+  .shell .sb-toggle .txt { display: none; }
+  .shell .sb-nav a { justify-content: center; padding: 10px 0; }
+  .shell .proj-switch { justify-content: center; padding: 8px; }
+}
+
+/* Stack the three workspace panes vertically below 960px */
+@media (max-width: 960px) {
+  body { overflow-y: auto; }
+  .workspace {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: minmax(240px, auto) minmax(420px, 1fr) minmax(240px, auto);
+    overflow-y: auto;
+  }
+  .workspace.chat-hidden { grid-template-rows: 0 1fr minmax(240px, auto); }
+  .workspace.insp-hidden { grid-template-rows: minmax(240px, auto) 1fr 0; }
+  .workspace.both-hidden { grid-template-rows: 0 1fr 0; }
+  .pane { border-right: 0; border-bottom: 1px solid var(--border); max-height: none; }
+  .pane:last-child { border-bottom: 0; }
+  .preview-body { padding: 24px; min-height: 500px; }
+  .chat-body { max-height: 400px; }
+  .agents-list { max-height: 360px; }
+  .activity { max-height: 360px; }
+  .page-content { padding: 24px 20px; }
+}
+
+/* Hide the palette-search text on truly tight viewports; ⌘K still works */
+@media (max-width: 720px) {
+  .topbar { gap: 8px; padding: 0 12px; }
+  .topbar .search { min-width: 0; padding: 6px 8px; }
+  .topbar .search span:not(.spacer) { display: none; }
+  .topbar .search kbd { display: none; }
+  .topbar .crumbs { display: none; }
+  .topbar .live-pill { display: none; }
+}
