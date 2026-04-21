@@ -4,8 +4,8 @@ export type AgentName = (typeof AGENT_ORDER)[number];
 export const AGENT_LABEL: Record<AgentName, string> = {
   orchestrator: "Orchestrator",
   product: "Product",
-  mobile: "Mobile Eng",
-  backend: "Backend Eng",
+  mobile: "Mobile",
+  backend: "Backend",
   qa: "QA",
 };
 
@@ -18,11 +18,11 @@ export const AGENT_SHORT: Record<AgentName, string> = {
 };
 
 export const AGENT_DESC: Record<AgentName, string> = {
-  orchestrator: "Plans and routes work to specialists",
-  product: "Writes specs, screens, data model",
-  mobile: "React Native / Expo implementation",
-  backend: "Migrations, RLS, APIs",
-  qa: "Typecheck, lint, smoke tests",
+  orchestrator: "Decomposes the ask; routes work to the specialists.",
+  product: "Shapes screens, data model, and user flows.",
+  mobile: "Writes React Native and Expo code.",
+  backend: "Runs Supabase migrations, RLS, and edge functions.",
+  qa: "Typecheck, lint, and smoke tests.",
 };
 
 export type AgentState = "idle" | "working" | "blocked" | "done" | "error";

@@ -26,10 +26,10 @@ export function SettingsPage({
       <div className="sub">Keys, preferences, and workspace configuration.</div>
       <div className="card">
         <h3>API key</h3>
-        <div className="desc">Your Anthropic API key. Stored in this browser only — never sent to our servers.</div>
+        <div className="desc">Anthropic API key. Stored in this browser only — never sent to our servers.</div>
         <div className="setting-row">
           <div className="k">
-            Anthropic key<span className="s">Used for every agent call. Costs show on your Anthropic bill.</span>
+            Anthropic key<span className="s">Every agent call uses this. Costs land on your Anthropic bill.</span>
           </div>
           <div className="v">
             <input
@@ -68,7 +68,7 @@ export function SettingsPage({
         <div className="setting-row">
           <div className="k">
             Desktop notifications
-            <span className="s">Ping me when a long-running session finishes or fails.</span>
+            <span className="s">Ping you when a long-running session finishes or fails.</span>
           </div>
           <div className="v">
             <div className={`switch ${notifications ? "on" : ""}`} onClick={() => setNotifications(!notifications)} />
@@ -86,7 +86,7 @@ export function SettingsPage({
         <div className="setting-row">
           <div className="k">
             Default model
-            <span className="s">The model new sessions start with. You can change per-session later.</span>
+            <span className="s">What new sessions start with. Override per-session later.</span>
           </div>
           <div className="v">
             <select defaultValue="sonnet-4-5">
