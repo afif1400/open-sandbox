@@ -359,7 +359,9 @@ export function AppRoot() {
           )}
           {route === "sessions" && <SessionsPage onOpen={() => setRoute("dashboard")} />}
           {route === "agents" && <AgentsPage />}
-          {route === "files" && <FilesPage diffEvents={diffEvents} />}
+          {route === "files" && (
+            <FilesPage diffEvents={diffEvents} onGoToDashboard={() => setRoute("dashboard")} />
+          )}
           {route === "docs" && <DocsPage />}
           {route === "settings" && (
             <SettingsPage
