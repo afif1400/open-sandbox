@@ -13,7 +13,7 @@ export function SetupWizard({ onComplete }: { onComplete: (key: string) => void 
           <span>workspace setup</span>
         </div>
         <h2>Connect your key</h2>
-        <p className="sub">Sandbox runs agents on your own API key (BYOK). You stay in control of costs and data.</p>
+        <p className="sub">Open Crew runs a crew of AI specialists on your own Anthropic key. You stay in control of costs and data.</p>
         <label>
           <div className="lbl">
             <span>Anthropic API key</span>
@@ -30,8 +30,7 @@ export function SetupWizard({ onComplete }: { onComplete: (key: string) => void 
         <div className="notice">
           <span className="ic">{Icon.lock}</span>
           <span>
-            Your key is stored in localStorage only and is never transmitted to our servers. You can revoke it from your
-            Anthropic console any time.
+            Stored in this browser only. Never transmitted. Revoke any time from your Anthropic console.
           </span>
         </div>
         <div className="actions">

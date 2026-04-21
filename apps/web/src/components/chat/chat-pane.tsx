@@ -62,7 +62,7 @@ export function ChatPane({
       {empty ? (
         <div className="empty-chat">
           <h2>What should we build?</h2>
-          <p>Describe an app idea. A team of agents will spec, build, and test it while you watch.</p>
+          <p>Describe the app. A crew of specialists will spec it, build it, and test it while you watch.</p>
           <div className="samples">
             {samples.map((s, i) => (
               <button key={i} className="sample" onClick={() => onSample(s.text)}>

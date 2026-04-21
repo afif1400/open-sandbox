@@ -53,13 +53,8 @@ textarea, input { font: inherit; color: inherit; }
 }
 .sb-top { padding: 14px 14px 10px; display: flex; align-items: center; gap: 10px; }
 .logo {
-  width: 28px; height: 28px; border-radius: 6px;
-  background: var(--brand); position: relative; flex: 0 0 28px;
-}
-.logo::after {
-  content: ""; position: absolute; inset: 6px;
-  background: var(--brand-ink); border-radius: 2px;
-  clip-path: polygon(0 0,100% 0,100% 40%,40% 40%,40% 100%,0 100%);
+  width: 28px; height: 28px; flex: 0 0 28px;
+  display: grid; place-items: center;
 }
 .sb-top .name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
 .shell.collapsed .sb-top .name, .shell.collapsed .sb-section, .shell.collapsed .sb-nav .lbl,
@@ -118,10 +113,15 @@ textarea, input { font: inherit; color: inherit; }
 .sb-user:hover { background: var(--surface); }
 .sb-user .av {
   width: 26px; height: 26px; border-radius: 50%;
-  background: linear-gradient(135deg, oklch(70% 0.14 40), oklch(70% 0.14 320));
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   flex: 0 0 26px;
   display: grid; place-items: center;
-  font-family: var(--mono); font-size: 11px; color: #000; font-weight: 700;
+  position: relative;
+}
+.sb-user .av::after {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand);
 }
 .sb-user .detail { flex: 1; min-width: 0; }
 .sb-user .detail .n { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

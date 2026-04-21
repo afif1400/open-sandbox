@@ -27,9 +27,9 @@ import { Palette } from "@/components/modals/palette";
 import { TweaksPanel, DEFAULT_TWEAKS, ACCENTS, type Tweaks } from "@/components/modals/tweaks-panel";
 
 const SAMPLES: Sample[] = [
-  { tag: "MOBILE", text: "A todo app with lists, priorities, and due dates" },
-  { tag: "WEB", text: "A landing page for a developer-tools startup" },
-  { tag: "BOT", text: "A Slack bot that summarizes our weekly PRs" },
+  { tag: "TODO", text: "A todo app with lists, priorities, and due dates" },
+  { tag: "WELLNESS", text: "A meditation timer with daily streaks and session history" },
+  { tag: "JOURNAL", text: "A photo journal with automatic monthly collages" },
 ];
 
 function initialAgents(): Record<AgentName, AgentInfo> {
@@ -49,22 +49,22 @@ export function AppRoot() {
 
   // Hydrate from localStorage after mount
   useEffect(() => {
-    const k = localStorage.getItem("sandbox_api_key") || "";
-    const r = (localStorage.getItem("sandbox_route") as Route | null) || "dashboard";
-    const sb = localStorage.getItem("sandbox_sb_collapsed") === "1";
+    const k = localStorage.getItem("opencrew_api_key") || "";
+    const r = (localStorage.getItem("opencrew_route") as Route | null) || "dashboard";
+    const sb = localStorage.getItem("opencrew_sb_collapsed") === "1";
     setApiKey(k);
     setRoute(r);
     setSbCollapsed(sb);
     setHydrated(true);
   }, []);
   useEffect(() => {
-    if (hydrated) localStorage.setItem("sandbox_api_key", apiKey);
+    if (hydrated) localStorage.setItem("opencrew_api_key", apiKey);
   }, [hydrated, apiKey]);
   useEffect(() => {
-    if (hydrated) localStorage.setItem("sandbox_route", route);
+    if (hydrated) localStorage.setItem("opencrew_route", route);
   }, [hydrated, route]);
   useEffect(() => {
-    if (hydrated) localStorage.setItem("sandbox_sb_collapsed", sbCollapsed ? "1" : "0");
+    if (hydrated) localStorage.setItem("opencrew_sb_collapsed", sbCollapsed ? "1" : "0");
   }, [hydrated, sbCollapsed]);
 
   const [chatHidden, setChatHidden] = useState(false);
