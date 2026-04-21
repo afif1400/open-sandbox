@@ -56,6 +56,39 @@ export function AppRoot() {
     setApiKey(k);
     setRoute(r);
     setSbCollapsed(sb);
+
+    // Restore the last session if there is one. We persist final state, not
+    // the scripted timeout loop — so a reload mid-stream shows a frozen
+    // snapshot (sessionState gets downgraded to 'paused' below; the user can
+    // restart from there).
+    const savedSession = localStorage.getItem("opencrew_session_v1");
+    if (savedSession) {
+      try {
+        const blob = JSON.parse(savedSession) as {
+          messages: Message[];
+          toolEvents: ToolEntry[];
+          diffEvents: DiffEntry[];
+          feed: FeedEntry[];
+          agents: Record<AgentName, AgentInfo>;
+          previewUrl: string | null;
+          sessionState: SessionState;
+        };
+        if (Array.isArray(blob.messages)) setMessages(blob.messages);
+        if (Array.isArray(blob.toolEvents)) setToolEvents(blob.toolEvents);
+        if (Array.isArray(blob.diffEvents)) setDiffEvents(blob.diffEvents);
+        if (Array.isArray(blob.feed)) setFeed(blob.feed);
+        if (blob.agents) setAgents(blob.agents);
+        if (blob.previewUrl !== undefined) setPreviewUrl(blob.previewUrl);
+        // A reload kills the setTimeout loop, so a 'running' state can't be
+        // resumed. Present it as 'paused' — the user can hit restart.
+        if (blob.sessionState) {
+          setSessionState(blob.sessionState === "running" ? "paused" : blob.sessionState);
+        }
+      } catch {
+        // malformed blob; ignore
+      }
+    }
+
     setHydrated(true);
   }, []);
   useEffect(() => {
@@ -95,6 +128,33 @@ export function AppRoot() {
   useEffect(() => {
     setDevice(tweaks.defaultDevice);
   }, [tweaks.defaultDevice]);
+
+  // Persist session snapshot on every relevant change, so a browser refresh
+  // doesn't wipe an in-flight build. localStorage writes are fast and session
+  // state isn't huge.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (sessionState === "idle") {
+      localStorage.removeItem("opencrew_session_v1");
+      return;
+    }
+    const blob = {
+      messages,
+      toolEvents,
+      diffEvents,
+      feed,
+      agents,
+      previewUrl,
+      // Store 'paused' when saving a running session, so a reload can't fake
+      // a live state it can't resume.
+      sessionState: sessionState === "running" ? "paused" : sessionState,
+    };
+    try {
+      localStorage.setItem("opencrew_session_v1", JSON.stringify(blob));
+    } catch {
+      // Quota exhausted or serialization error — skip silently.
+    }
+  }, [hydrated, sessionState, messages, toolEvents, diffEvents, feed, agents, previewUrl]);
 
   // Accent via CSS var
   useEffect(() => {
