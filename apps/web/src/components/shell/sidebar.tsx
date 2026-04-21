@@ -1,6 +1,7 @@
 "use client";
 import { Icon } from "@/components/icons";
 import type { Route } from "./routes";
+import type { SessionState } from "./topbar";
 
 type NavItem = { id: Route; label: string; icon: React.ReactElement; badge?: string | null };
 
@@ -16,7 +17,7 @@ export function Sidebar({
   setRoute: (r: Route) => void;
   collapsed: boolean;
   setCollapsed: (c: boolean) => void;
-  sessionState: "idle" | "running" | "done";
+  sessionState: SessionState;
   streamCount: number;
 }) {
   const nav: NavItem[] = [

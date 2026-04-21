@@ -25,7 +25,7 @@ export const AGENT_DESC: Record<AgentName, string> = {
   qa: "Typecheck, lint, smoke tests",
 };
 
-export type AgentState = "idle" | "working" | "blocked" | "done";
+export type AgentState = "idle" | "working" | "blocked" | "done" | "error";
 export type ToolCallState = "start" | "end" | "error";
 export type DiffOp = "create" | "modify" | "delete";
 

@@ -47,3 +47,23 @@ export const SCRIPTED_STREAM: ScriptedEntry[] = [
   { delayMs: 300, event: { type: "agent.message", agent: "orchestrator", text: "Done. The app is live in the preview — you can see lists, add todos, and mark them complete. What would you like to change?" } },
   { delayMs: 100, event: { type: "agent.state", agent: "orchestrator", state: "done", tokens: 640, task: "build complete" } },
 ];
+
+/**
+ * QA-failure variant — up to preview.ready it's identical to the happy path,
+ * then QA's smoke test catches a runtime error in HomeScreen. The session
+ * stops in an error state so the error UX is visible.
+ */
+export const QA_FAIL_STREAM: ScriptedEntry[] = [
+  ...SCRIPTED_STREAM.slice(0, SCRIPTED_STREAM.length - 9),
+
+  { delayMs: 400, event: { type: "agent.state", agent: "qa", state: "working", task: "typecheck + smoke" } },
+  { delayMs: 700, event: { type: "tool.call", agent: "qa", tool: "run_typecheck", args: {}, state: "start" } },
+  { delayMs: 800, event: { type: "tool.call", agent: "qa", tool: "run_typecheck", args: {}, state: "end" } },
+  { delayMs: 300, event: { type: "tool.call", agent: "qa", tool: "smoke_screens", args: { count: 3 }, state: "start" } },
+  { delayMs: 1200, event: { type: "tool.call", agent: "qa", tool: "smoke_screens", args: {}, state: "error", error: "HomeScreen threw: useLists is not a function" } },
+  { delayMs: 300, event: { type: "qa.report", pass: false, checks: { typecheck: { pass: true }, lint: { pass: true }, smoke: { pass: false, detail: "HomeScreen threw on mount: useLists is not a function" } } } },
+  { delayMs: 200, event: { type: "agent.state", agent: "qa", state: "error", tokens: 520, task: "1 check failed" } },
+
+  { delayMs: 400, event: { type: "agent.message", agent: "orchestrator", text: "QA caught a runtime error in HomeScreen — the useLists import is missing. Mobile will need to revisit the hooks wiring before we can ship." } },
+  { delayMs: 100, event: { type: "agent.state", agent: "orchestrator", state: "blocked", tokens: 680, task: "awaiting mobile retry" } },
+];
