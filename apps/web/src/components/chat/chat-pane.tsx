@@ -26,6 +26,7 @@ export function ChatPane({
   samples: Sample[];
 }) {
   const streamRef = useRef<HTMLDivElement>(null);
+  const stuckToBottom = useRef(true);
   const [draft, setDraft] = useState("");
 
   const timeline = useMemo(() => {
@@ -38,9 +39,18 @@ export function ChatPane({
     return items;
   }, [messages, toolEvents, diffEvents]);
 
+  // Only auto-scroll if the user is already near the bottom. Lets them scroll
+  // up to re-read older events without being yanked back on every new event.
+  const onStreamScroll = () => {
+    const el = streamRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    stuckToBottom.current = distance < 48;
+  };
+
   useEffect(() => {
     const el = streamRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stuckToBottom.current) el.scrollTop = el.scrollHeight;
   }, [timeline.length, thinking]);
 
   const send = () => {
@@ -74,7 +84,7 @@ export function ChatPane({
           </div>
         </div>
       ) : (
-        <div className="chat-body" ref={streamRef}>
+        <div className="chat-body" ref={streamRef} onScroll={onStreamScroll}>
           <div className="chat-list">
             {timeline.map((item) => {
               if (item.kind === "msg") return <Bubble key={item.id} {...item.data} />;
