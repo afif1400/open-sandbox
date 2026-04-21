@@ -1,0 +1,19 @@
+{
+  "name": "mobile-multi-agent-builder",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.3",
+    "@biomejs/biome": "^1.9.4"
+  },
+  "packageManager": "bun@1.2.0"
+}
