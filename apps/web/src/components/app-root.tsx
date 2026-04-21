@@ -9,7 +9,7 @@ import type {
   ToolEntry,
 } from "@/types/events";
 import { AGENT_ORDER } from "@/types/events";
-import { SCRIPTED_STREAM, QA_FAIL_STREAM } from "@/lib/scripted-stream";
+import { pickScript } from "@/lib/scripted-stream";
 import { ChatPane, type Sample } from "@/components/chat/chat-pane";
 import { PreviewPane, type Device, type PreviewMode } from "@/components/preview/preview-pane";
 import { InspectorPane, type InspectorTab } from "@/components/inspector/inspector-pane";
@@ -147,7 +147,7 @@ export function AppRoot() {
       const base = Date.now();
       setMessages([{ kind: "user", text: userText, ts: base }]);
 
-      const stream = tweaks.scenario === "qa-fail" ? QA_FAIL_STREAM : SCRIPTED_STREAM;
+      const stream = pickScript(userText, tweaks.scenario);
       let cursor = 0;
       const virtualTs = () => base + cursor;
 
