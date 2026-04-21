@@ -5,6 +5,7 @@ export type Tweaks = {
   defaultDevice: "ios" | "android";
   accent: "amber" | "mint" | "iris";
   streamSpeed: "0.5" | "1" | "2" | "4" | "8";
+  scenario: "happy" | "qa-fail";
 };
 
 export const DEFAULT_TWEAKS: Tweaks = {
@@ -12,6 +13,7 @@ export const DEFAULT_TWEAKS: Tweaks = {
   defaultDevice: "android",
   accent: "amber",
   streamSpeed: "1",
+  scenario: "happy",
 };
 
 export const ACCENTS: Record<Tweaks["accent"], { brand: string; ink: string }> = {
@@ -86,6 +88,25 @@ export function TweaksPanel({
               onClick={() => setTweak("streamSpeed", v)}
             >
               {v}×
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grp">
+        <div className="lbl">Scenario</div>
+        <div className="opts">
+          {(
+            [
+              ["happy", "happy path"],
+              ["qa-fail", "qa failure"],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={v}
+              className={tweaks.scenario === v ? "on" : ""}
+              onClick={() => setTweak("scenario", v)}
+            >
+              {label}
             </button>
           ))}
         </div>

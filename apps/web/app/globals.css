@@ -190,6 +190,10 @@ textarea, input { font: inherit; color: inherit; }
 .topbar .live-pill .d { width: 6px; height: 6px; border-radius: 50%; background: var(--agent-working); box-shadow: 0 0 8px var(--agent-working); animation: pulse 1.6s ease-in-out infinite; }
 .topbar .live-pill.idle .d { background: var(--agent-idle); box-shadow: none; animation: none; }
 .topbar .live-pill.done .d { background: var(--agent-done); box-shadow: 0 0 8px var(--agent-done); animation: none; }
+.topbar .live-pill.paused .d { background: var(--agent-blocked); box-shadow: 0 0 8px var(--agent-blocked); animation: none; }
+.topbar .live-pill.error { border-color: color-mix(in oklch, var(--agent-error) 40%, var(--border)); color: var(--agent-error); }
+.topbar .live-pill.error .d { background: var(--agent-error); box-shadow: 0 0 8px var(--agent-error); animation: none; }
+.topbar .run-btn.pause { background: var(--surface-2); color: var(--text); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 /* Page body */
@@ -426,7 +430,8 @@ kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); 
 }
 .agent-row.working { border-color: color-mix(in oklch, var(--agent-working) 38%, var(--border)); background: color-mix(in oklch, var(--agent-working) 6%, var(--surface)); }
 .agent-row.done { border-color: color-mix(in oklch, var(--agent-done) 30%, var(--border)); }
-.agent-row.blocked { border-color: color-mix(in oklch, var(--agent-blocked) 38%, var(--border)); }
+.agent-row.blocked { border-color: color-mix(in oklch, var(--agent-blocked) 38%, var(--border)); background: color-mix(in oklch, var(--agent-blocked) 5%, var(--surface)); }
+.agent-row.error { border-color: color-mix(in oklch, var(--agent-error) 45%, var(--border)); background: color-mix(in oklch, var(--agent-error) 7%, var(--surface)); }
 .agent-row .lhs { display: flex; align-items: center; gap: 10px; }
 .agent-row .ico {
   width: 32px; height: 32px; border-radius: 8px;
@@ -438,6 +443,8 @@ kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); 
 }
 .agent-row.working .ico { background: color-mix(in oklch, var(--agent-working) 20%, var(--bg-elev)); color: var(--agent-working); }
 .agent-row.done .ico { background: color-mix(in oklch, var(--agent-done) 18%, var(--bg-elev)); color: var(--agent-done); }
+.agent-row.blocked .ico { background: color-mix(in oklch, var(--agent-blocked) 18%, var(--bg-elev)); color: var(--agent-blocked); }
+.agent-row.error .ico { background: color-mix(in oklch, var(--agent-error) 22%, var(--bg-elev)); color: var(--agent-error); }
 .agent-row .ico .ring { position: absolute; inset: -3px; border-radius: 10px; border: 1.5px solid var(--agent-working); opacity: 0.5; animation: pulse 1.6s infinite; }
 .agent-row:not(.working) .ico .ring { display: none; }
 .agent-row .body { min-width: 0; }
@@ -445,6 +452,8 @@ kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); 
 .agent-row .body .n .state { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 3px; background: var(--surface-2); color: var(--text-3); }
 .agent-row.working .body .n .state { background: color-mix(in oklch, var(--agent-working) 20%, transparent); color: var(--agent-working); }
 .agent-row.done .body .n .state { background: color-mix(in oklch, var(--agent-done) 20%, transparent); color: var(--agent-done); }
+.agent-row.blocked .body .n .state { background: color-mix(in oklch, var(--agent-blocked) 20%, transparent); color: var(--agent-blocked); }
+.agent-row.error .body .n .state { background: color-mix(in oklch, var(--agent-error) 22%, transparent); color: var(--agent-error); }
 .agent-row .body .task { font-size: 12px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .agent-row.idle .body .task { color: var(--text-3); }
 .agent-row .rhs { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--text-3); display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
@@ -596,6 +605,8 @@ kbd { display: inline-block; padding: 1px 5px; border: 1px solid var(--border); 
   animation: toast-in 0.25s ease-out;
 }
 .toast .d { width: 6px; height: 6px; border-radius: 50%; background: var(--agent-done); }
+.toast.error { border-color: color-mix(in oklch, var(--agent-error) 55%, var(--border-strong)); color: var(--text); }
+.toast.error .d { background: var(--agent-error); box-shadow: 0 0 8px var(--agent-error); }
 
 /* ========================================================================
    Motion polish

@@ -9,7 +9,7 @@ import type {
   ToolEntry,
 } from "@/types/events";
 import { AGENT_ORDER } from "@/types/events";
-import { SCRIPTED_STREAM } from "@/lib/scripted-stream";
+import { SCRIPTED_STREAM, QA_FAIL_STREAM } from "@/lib/scripted-stream";
 import { ChatPane, type Sample } from "@/components/chat/chat-pane";
 import { PreviewPane, type Device, type PreviewMode } from "@/components/preview/preview-pane";
 import { InspectorPane, type InspectorTab } from "@/components/inspector/inspector-pane";
@@ -105,9 +105,13 @@ export function AppRoot() {
   // Script runner
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef(false);
+  const pausedRef = useRef(false);
+  const pendingStepRef = useRef<null | (() => void)>(null);
 
   const resetSession = useCallback(() => {
     abortRef.current = true;
+    pausedRef.current = false;
+    pendingStepRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setSessionState("idle");
     setMessages([]);
@@ -119,28 +123,66 @@ export function AppRoot() {
     setPreviewUrl(null);
   }, []);
 
+  const pauseSession = useCallback(() => {
+    pausedRef.current = true;
+    setSessionState("paused");
+    setThinking(null);
+  }, []);
+
+  const resumeSession = useCallback(() => {
+    pausedRef.current = false;
+    setSessionState("running");
+    const fn = pendingStepRef.current;
+    pendingStepRef.current = null;
+    if (fn) fn();
+  }, []);
+
   const runStream = useCallback(
     (userText: string) => {
       abortRef.current = false;
+      pausedRef.current = false;
+      pendingStepRef.current = null;
       setSessionState("running");
       const speed = parseFloat(tweaks.streamSpeed) || 1;
       const base = Date.now();
       setMessages([{ kind: "user", text: userText, ts: base }]);
 
-      const stream = SCRIPTED_STREAM;
+      const stream = tweaks.scenario === "qa-fail" ? QA_FAIL_STREAM : SCRIPTED_STREAM;
       let cursor = 0;
       const virtualTs = () => base + cursor;
 
+      const endSession = (reason: "done" | "error") => {
+        setThinking(null);
+        if (reason === "error") {
+          setSessionState("error");
+          setToast("QA found a failure — session halted");
+          setTimeout(() => setToast(null), 3200);
+        } else {
+          setSessionState("done");
+        }
+      };
+
       const step = (i: number) => {
-        if (abortRef.current || i >= stream.length) {
-          setSessionState(abortRef.current ? "idle" : "done");
-          setThinking(null);
+        if (abortRef.current) return;
+        if (i >= stream.length) {
+          // Decide whether this run ended happily or in an error state.
+          const sawError = tweaks.scenario === "qa-fail";
+          endSession(sawError ? "error" : "done");
           return;
         }
         const entry = stream[i];
         if (!entry) return;
         const { delayMs, event } = entry;
-        timeoutRef.current = setTimeout(() => {
+
+        const apply = () => {
+          if (abortRef.current) return;
+          if (pausedRef.current) {
+            // Pause fired while the timer was waiting. Stash this same callback
+            // so resume can continue from here without losing the event.
+            pendingStepRef.current = apply;
+            return;
+          }
+
           cursor += delayMs;
           const ts = virtualTs();
 
@@ -184,11 +226,13 @@ export function AppRoot() {
             setTimeout(() => setToast(null), 2200);
           }
           step(i + 1);
-        }, delayMs / speed);
+        };
+
+        timeoutRef.current = setTimeout(apply, delayMs / speed);
       };
       step(0);
     },
-    [tweaks.streamSpeed]
+    [tweaks.streamSpeed, tweaks.scenario]
   );
 
   // Global shortcuts
@@ -245,10 +289,16 @@ export function AppRoot() {
         <Topbar
           route={route}
           sessionState={sessionState}
-          onRunToggle={() => {
-            if (sessionState === "running") resetSession();
-            else handleSubmit(SAMPLES[0]!.text);
+          onPrimaryAction={() => {
+            if (sessionState === "running") {
+              pauseSession();
+            } else if (sessionState === "paused") {
+              resumeSession();
+            } else {
+              handleSubmit(SAMPLES[0]!.text);
+            }
           }}
+          onStop={resetSession}
           onOpenPalette={() => setPaletteOpen(true)}
           onToggleChat={() => setChatHidden((h) => !h)}
           onToggleInsp={() => setInspHidden((h) => !h)}
@@ -327,7 +377,7 @@ export function AppRoot() {
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} onNavigate={(id) => setRoute(id)} />}
       {tweaksOpen && <TweaksPanel tweaks={tweaks} setTweak={setTweak} onClose={() => setTweaksOpen(false)} />}
       {toast && (
-        <div className="toast">
+        <div className={`toast ${/fail|error|halted/i.test(toast) ? "error" : ""}`}>
           <span className="d" />
           {toast}
         </div>
