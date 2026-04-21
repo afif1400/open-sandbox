@@ -9,3 +9,9 @@ coverage/
 playwright-report/
 test-results/
 .DS_Store
+
+# Superpowers planning docs (local only)
+docs/superpowers/
+
+# TS incremental build cache
+*.tsbuildinfo
