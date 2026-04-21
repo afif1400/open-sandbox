@@ -21,7 +21,7 @@ export function Sidebar({
 }) {
   const nav: NavItem[] = [
     { id: "dashboard", label: "Dashboard", icon: Icon.dash, badge: sessionState === "running" ? "live" : null },
-    { id: "sessions", label: "Sessions", icon: Icon.sessions, badge: "12" },
+    { id: "sessions", label: "Sessions", icon: Icon.sessions },
     { id: "agents", label: "Agents", icon: Icon.agents },
     { id: "files", label: "Workspace", icon: Icon.files, badge: streamCount > 0 ? "•" : null },
     { id: "docs", label: "Docs", icon: Icon.docs },
@@ -29,14 +29,22 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sb-top">
-        <div className="logo" />
-        <span className="name">sandbox</span>
+        <div className="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+            <circle cx="14" cy="14" r="3.2" fill="var(--brand)" />
+            <circle cx="14" cy="5.5" r="2.2" fill="var(--brand)" opacity="0.55" />
+            <circle cx="22.5" cy="14" r="2.2" fill="var(--brand)" opacity="0.55" />
+            <circle cx="14" cy="22.5" r="2.2" fill="var(--brand)" opacity="0.55" />
+            <circle cx="5.5" cy="14" r="2.2" fill="var(--brand)" opacity="0.55" />
+          </svg>
+        </div>
+        <span className="name">open crew</span>
       </div>
       <div className="proj-switch" title="Switch project">
         <div className="proj-dot">T</div>
         <div className="proj-info">
           <div className="t">todo-companion</div>
-          <div className="s">workspace · prod</div>
+          <div className="s">demo session</div>
         </div>
         <span className="chev">{Icon.chev}</span>
       </div>
@@ -64,10 +72,10 @@ export function Sidebar({
       </nav>
       <div className="sb-bottom">
         <div className="sb-user">
-          <div className="av">JM</div>
+          <div className="av" aria-hidden="true" />
           <div className="detail">
-            <div className="n">Jamie Mercer</div>
-            <div className="m">free · 3 of 5 seats</div>
+            <div className="n">you</div>
+            <div className="m">BYOK</div>
           </div>
         </div>
       </div>

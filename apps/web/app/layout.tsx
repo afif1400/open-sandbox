@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Sandbox — Builder Dashboard",
-  description: "Prompt a team of agents to build your mobile app",
+  title: "Open Crew — Ship mobile apps with a crew of AI specialists",
+  description: "Open Crew runs a team of AI specialists that spec, build, and test your mobile app while you watch.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

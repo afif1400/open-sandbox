@@ -103,7 +103,7 @@ export function SettingsPage({
         <div className="setting-row">
           <div className="k">
             Reset current session
-            <span className="s">Clears chat, agents, and preview for todo-companion.</span>
+            <span className="s">Clears chat, agents, and preview for the current session.</span>
           </div>
           <div className="v">
             <div className="row">

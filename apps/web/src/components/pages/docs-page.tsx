@@ -1,7 +1,7 @@
 const SECTIONS = [
   { t: "Getting started", d: "Zero to first deploy in 10 minutes. BYOK or use a managed key." },
   { t: "Agents reference", d: "Each specialist's tools, prompts, and cost profile." },
-  { t: "Sandbox runtime", d: "How sessions are isolated, limits, and data retention." },
+  { t: "Session runtime", d: "How sessions are isolated, resource limits, and data retention." },
   { t: "Deploy targets", d: "Push to Vercel, Fly, Expo EAS, or your own Docker host." },
   { t: "API & webhooks", d: "Trigger builds from Slack, GitHub, Linear — wire the event stream anywhere." },
   { t: "Team & billing", d: "Seats, rate limits, and how BYOK usage is metered." },

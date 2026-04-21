@@ -15,3 +15,8 @@ docs/superpowers/
 
 # TS incremental build cache
 *.tsbuildinfo
+
+# Playwright MCP inspection artifacts
+.playwright-mcp/
+/*.png
+/apps/web/*.png
