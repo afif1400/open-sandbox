@@ -16,6 +16,7 @@ export function ChatPane({
   onSample,
   onSubmit,
   samples,
+  modelLabel,
 }: {
   messages: Message[];
   toolEvents: ToolEntry[];
@@ -24,6 +25,7 @@ export function ChatPane({
   onSample: (text: string) => void;
   onSubmit: (text: string) => void;
   samples: Sample[];
+  modelLabel: string;
 }) {
   const streamRef = useRef<HTMLDivElement>(null);
   const stuckToBottom = useRef(true);
@@ -107,6 +109,16 @@ export function ChatPane({
         </div>
       )}
       <div className="prompt">
+        {!empty && !draft && (
+          <div className="sample-chips" aria-label="Quick prompts">
+            {samples.map((s, i) => (
+              <button key={i} className="sample-chip" onClick={() => onSample(s.text)}>
+                <span className="tag">{s.tag}</span>
+                <span className="t">{s.text}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="wrap">
           <textarea
             value={draft}
@@ -122,7 +134,7 @@ export function ChatPane({
           />
           <div className="tools">
             <button className="chip">＋ attach</button>
-            <button className="chip">claude-sonnet-4-5</button>
+            <button className="chip">{modelLabel}</button>
             <span className="spacer" />
             <span className="hint">
               <kbd>⌘</kbd>

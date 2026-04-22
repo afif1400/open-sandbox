@@ -6,6 +6,8 @@ export type Tweaks = {
   accent: "amber" | "mint" | "iris";
   streamSpeed: "0.5" | "1" | "2" | "4" | "8";
   scenario: "happy" | "qa-fail";
+  defaultModel: "sonnet-4-5" | "opus-4" | "haiku-4-5";
+  theme: "dark" | "light";
 };
 
 export const DEFAULT_TWEAKS: Tweaks = {
@@ -14,6 +16,8 @@ export const DEFAULT_TWEAKS: Tweaks = {
   accent: "amber",
   streamSpeed: "1",
   scenario: "happy",
+  defaultModel: "sonnet-4-5",
+  theme: "dark",
 };
 
 export const ACCENTS: Record<Tweaks["accent"], { brand: string; ink: string }> = {
@@ -107,6 +111,20 @@ export function TweaksPanel({
               onClick={() => setTweak("scenario", v)}
             >
               {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grp">
+        <div className="lbl">Theme</div>
+        <div className="opts">
+          {(["dark", "light"] as const).map((v) => (
+            <button
+              key={v}
+              className={tweaks.theme === v ? "on" : ""}
+              onClick={() => setTweak("theme", v)}
+            >
+              {v}
             </button>
           ))}
         </div>

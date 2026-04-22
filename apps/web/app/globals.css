@@ -286,6 +286,28 @@ textarea, input { font: inherit; color: inherit; }
 
 /* Prompt */
 .prompt { border-top: 1px solid var(--border); padding: 14px 16px 16px; background: var(--bg); }
+.prompt .sample-chips { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; }
+.prompt .sample-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s;
+}
+.prompt .sample-chip:hover { border-color: var(--brand); color: var(--text); }
+.prompt .sample-chip .tag {
+  font-family: var(--mono); font-size: 9.5px;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--bg);
+  color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.prompt .sample-chip .t { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .prompt .wrap {
   border: 1px solid var(--border); border-radius: var(--r-md);
   background: var(--surface); padding: 10px 12px;
@@ -795,4 +817,44 @@ textarea:focus-visible, input:focus-visible {
   .topbar .search kbd { display: none; }
   .topbar .crumbs { display: none; }
   .topbar .live-pill { display: none; }
+}
+
+/* ========================================================================
+   Light theme
+   Applied via <html data-theme="light">. Overrides just the palette vars;
+   everything downstream reads through them, so no per-component rules.
+   ======================================================================== */
+[data-theme="light"] {
+  --bg: oklch(98% 0.003 70);
+  --bg-elev: oklch(100% 0 0);
+  --bg-sidebar: oklch(96% 0.004 70);
+  --surface: oklch(97% 0.004 70);
+  --surface-2: oklch(94% 0.006 70);
+  --surface-hover: oklch(92% 0.008 70);
+  --border: oklch(88% 0.006 70);
+  --border-strong: oklch(78% 0.008 70);
+  --text: oklch(22% 0.005 70);
+  --text-2: oklch(42% 0.008 70);
+  --text-3: oklch(58% 0.01 70);
+  --brand: oklch(62% 0.17 70);
+  --brand-ink: oklch(99% 0 0);
+  --agent-idle: oklch(65% 0.012 60);
+  --agent-working: oklch(55% 0.16 230);
+  --agent-blocked: oklch(62% 0.17 40);
+  --agent-done: oklch(55% 0.16 155);
+  --agent-error: oklch(58% 0.2 25);
+}
+
+/* A couple of light-theme specifics where the generic var scheme falls short */
+[data-theme="light"] .preview-body {
+  background:
+    radial-gradient(circle at center, oklch(96% 0.004 70) 0, transparent 70%),
+    linear-gradient(var(--border) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--bg);
+}
+[data-theme="light"] .phone {
+  background: #111;
+  box-shadow: 0 0 0 1px oklch(70% 0 0), 0 0 0 8px oklch(92% 0.003 60),
+    0 30px 60px -20px oklch(0% 0 0 / 0.3), inset 0 0 0 1px oklch(40% 0 0);
 }
