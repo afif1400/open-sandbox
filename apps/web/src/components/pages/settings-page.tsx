@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 
+export type ModelId = "sonnet-4-5" | "opus-4" | "haiku-4-5";
+
 export function SettingsPage({
   apiKey,
   setApiKey,
@@ -8,7 +10,10 @@ export function SettingsPage({
   setNotifications,
   autosave,
   setAutosave,
+  defaultModel,
+  setDefaultModel,
   onReset,
+  onExport,
 }: {
   apiKey: string;
   setApiKey: (v: string) => void;
@@ -16,7 +21,10 @@ export function SettingsPage({
   setNotifications: (v: boolean) => void;
   autosave: boolean;
   setAutosave: (v: boolean) => void;
+  defaultModel: ModelId;
+  setDefaultModel: (v: ModelId) => void;
   onReset: () => void;
+  onExport: () => void;
 }) {
   const [key, setKey] = useState(apiKey || "");
   const [saved, setSaved] = useState(false);
@@ -89,11 +97,28 @@ export function SettingsPage({
             <span className="s">What new sessions start with. Override per-session later.</span>
           </div>
           <div className="v">
-            <select defaultValue="sonnet-4-5">
+            <select value={defaultModel} onChange={(e) => setDefaultModel(e.target.value as ModelId)}>
               <option value="sonnet-4-5">claude-sonnet-4-5</option>
               <option value="opus-4">claude-opus-4</option>
               <option value="haiku-4-5">claude-haiku-4-5</option>
             </select>
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <h3>Export</h3>
+        <div className="desc">Take the current session with you as readable markdown.</div>
+        <div className="setting-row">
+          <div className="k">
+            Download session
+            <span className="s">Chat, tool calls, and file diffs in chronological order.</span>
+          </div>
+          <div className="v">
+            <div className="row">
+              <button className="btn-prim" onClick={onExport}>
+                download .md
+              </button>
+            </div>
           </div>
         </div>
       </div>

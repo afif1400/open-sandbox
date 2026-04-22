@@ -57,6 +57,17 @@ export function AppRoot() {
     setRoute(r);
     setSbCollapsed(sb);
 
+    // Restore tweaks (theme, accent, scenario, model, etc.)
+    const savedTweaks = localStorage.getItem("opencrew_tweaks");
+    if (savedTweaks) {
+      try {
+        const parsed = JSON.parse(savedTweaks);
+        setTweaks((prev) => ({ ...prev, ...parsed }));
+      } catch {
+        // malformed; ignore
+      }
+    }
+
     // Restore the last session if there is one. We persist final state, not
     // the scripted timeout loop — so a reload mid-stream shows a frozen
     // snapshot (sessionState gets downgraded to 'paused' below; the user can
@@ -110,6 +121,9 @@ export function AppRoot() {
   const [tweaks, setTweaks] = useState<Tweaks>(DEFAULT_TWEAKS);
   const setTweak = <K extends keyof Tweaks>(k: K, v: Tweaks[K]) =>
     setTweaks((prev) => ({ ...prev, [k]: v }));
+  useEffect(() => {
+    if (hydrated) localStorage.setItem("opencrew_tweaks", JSON.stringify(tweaks));
+  }, [hydrated, tweaks]);
 
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -163,6 +177,56 @@ export function AppRoot() {
     document.documentElement.style.setProperty("--brand", a.brand);
     document.documentElement.style.setProperty("--brand-ink", a.ink);
   }, [tweaks.accent]);
+
+  // Theme (light / dark) as an attribute on <html>, consumed by CSS [data-theme="light"]
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.theme = tweaks.theme;
+  }, [tweaks.theme]);
+
+  // Export current session to a readable markdown file (download triggered
+  // via Blob + a synthetic <a>).
+  const exportSession = useCallback(() => {
+    const parts: string[] = [];
+    parts.push(`# Open Crew session\n`);
+    parts.push(`_Exported ${new Date().toISOString()}_\n`);
+    const combined = [
+      ...messages.map((m) => ({ sort: m.ts, kind: "msg" as const, data: m })),
+      ...toolEvents.map((t) => ({ sort: t.ts, kind: "tool" as const, data: t })),
+      ...diffEvents.map((d) => ({ sort: d.ts, kind: "diff" as const, data: d })),
+    ].sort((a, b) => a.sort - b.sort);
+
+    for (const entry of combined) {
+      if (entry.kind === "msg") {
+        const m = entry.data;
+        if (m.kind === "user") {
+          parts.push(`\n## You\n\n${m.text}`);
+        } else {
+          parts.push(`\n## ${m.agent}\n\n${m.text}`);
+        }
+      } else if (entry.kind === "tool") {
+        const t = entry.data;
+        parts.push(`\n\`${t.agent}.${t.tool}()\` — ${t.state}`);
+        if (t.args && Object.keys(t.args).length) {
+          parts.push("\n```json\n" + JSON.stringify(t.args, null, 2) + "\n```");
+        }
+      } else {
+        const d = entry.data;
+        parts.push(`\n**${d.op.toUpperCase()}** \`${d.path}\` _(by ${d.agent})_\n\n\`\`\`diff\n${d.diff}\n\`\`\``);
+      }
+    }
+
+    const blob = new Blob([parts.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `open-crew-session-${stamp}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [messages, toolEvents, diffEvents]);
 
   // Script runner
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -388,6 +452,7 @@ export function AppRoot() {
                   onSample={handleSample}
                   onSubmit={handleSubmit}
                   samples={SAMPLES}
+                  modelLabel={`claude-${tweaks.defaultModel}`}
                 />
               </div>
               <div
@@ -438,7 +503,10 @@ export function AppRoot() {
               setNotifications={setNotifications}
               autosave={autosave}
               setAutosave={setAutosave}
+              defaultModel={tweaks.defaultModel}
+              setDefaultModel={(v) => setTweak("defaultModel", v)}
               onReset={resetSession}
+              onExport={exportSession}
             />
           )}
         </div>
