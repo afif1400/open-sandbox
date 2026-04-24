@@ -1,12 +1,15 @@
 "use client";
 
+import { PROVIDER_ORDER, PROVIDERS, type ProviderId, defaultModelByProvider } from "@/lib/providers";
+
 export type Tweaks = {
   chatDensity: "compact" | "comfortable" | "spacious";
   defaultDevice: "ios" | "android";
   accent: "amber" | "mint" | "iris";
   streamSpeed: "0.5" | "1" | "2" | "4" | "8";
   scenario: "happy" | "qa-fail";
-  defaultModel: "sonnet-4-5" | "opus-4" | "haiku-4-5";
+  provider: ProviderId;
+  modelByProvider: Record<ProviderId, string>;
   theme: "dark" | "light";
 };
 
@@ -16,7 +19,8 @@ export const DEFAULT_TWEAKS: Tweaks = {
   accent: "amber",
   streamSpeed: "1",
   scenario: "happy",
-  defaultModel: "sonnet-4-5",
+  provider: "anthropic",
+  modelByProvider: defaultModelByProvider(),
   theme: "dark",
 };
 
@@ -35,6 +39,8 @@ export function TweaksPanel({
   setTweak: <K extends keyof Tweaks>(k: K, v: Tweaks[K]) => void;
   onClose: () => void;
 }) {
+  const activeModel = tweaks.modelByProvider[tweaks.provider];
+  const providerModels = PROVIDERS[tweaks.provider].models;
   return (
     <div className="tweaks-panel">
       <h3>
@@ -111,6 +117,36 @@ export function TweaksPanel({
               onClick={() => setTweak("scenario", v)}
             >
               {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grp">
+        <div className="lbl">Provider</div>
+        <div className="opts">
+          {PROVIDER_ORDER.map((p) => (
+            <button
+              key={p}
+              className={tweaks.provider === p ? "on" : ""}
+              onClick={() => setTweak("provider", p)}
+            >
+              {PROVIDERS[p].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grp">
+        <div className="lbl">Model</div>
+        <div className="opts">
+          {providerModels.map((m) => (
+            <button
+              key={m.id}
+              className={activeModel === m.id ? "on" : ""}
+              onClick={() =>
+                setTweak("modelByProvider", { ...tweaks.modelByProvider, [tweaks.provider]: m.id })
+              }
+            >
+              {m.label}
             </button>
           ))}
         </div>
