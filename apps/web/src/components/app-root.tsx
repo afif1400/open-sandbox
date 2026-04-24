@@ -17,6 +17,7 @@ import {
   modelLabelFor,
   type ProviderId,
 } from "@/lib/providers";
+import { LIVE_AGENT_ROLES, type LiveAgentRole } from "@/lib/agent-prompts";
 import { ChatPane, type Sample } from "@/components/chat/chat-pane";
 import { PreviewPane, type Device, type PreviewMode } from "@/components/preview/preview-pane";
 import { InspectorPane, type InspectorTab } from "@/components/inspector/inspector-pane";
@@ -163,7 +164,7 @@ export function AppRoot() {
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [agents, setAgents] = useState<Record<AgentName, AgentInfo>>(() => initialAgents());
   const [thinking, setThinking] = useState<AgentName | null>(null);
-  const [liveOrchestrator, setLiveOrchestrator] = useState(false);
+  const [liveAgent, setLiveAgent] = useState<AgentName | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>(tweaks.defaultDevice);
   const [mode, setMode] = useState<PreviewMode>("web");
@@ -281,7 +282,7 @@ export function AppRoot() {
     setFeed([]);
     setAgents(initialAgents());
     setThinking(null);
-    setLiveOrchestrator(false);
+    setLiveAgent(null);
     setPreviewUrl(null);
   }, []);
 
@@ -300,7 +301,7 @@ export function AppRoot() {
   }, []);
 
   const runScriptedStream = useCallback(
-    (userText: string, baseTs: number, skipOrchestrator: boolean) => {
+    (userText: string, baseTs: number, skipRoles: AgentName[]) => {
       abortRef.current = false;
       pausedRef.current = false;
       pendingStepRef.current = null;
@@ -308,13 +309,14 @@ export function AppRoot() {
       let cursor = baseTs - Date.now();
       const virtualTs = () => Date.now() + cursor;
 
-      // Drop orchestrator events when the real API already produced the opener.
+      // Drop events for roles that already ran live — avoids duplicate turns.
       const raw = pickScript(userText, tweaks.scenario);
-      const stream = skipOrchestrator ? raw.filter((e) => !("agent" in e.event) || e.event.agent !== "orchestrator") : raw;
+      const skip = new Set<AgentName>(skipRoles);
+      const stream = skip.size > 0 ? raw.filter((e) => !("agent" in e.event) || !skip.has(e.event.agent)) : raw;
 
       const endSession = (reason: "done" | "error") => {
         setThinking(null);
-        setLiveOrchestrator(false);
+        setLiveAgent(null);
         if (reason === "error") {
           setSessionState("error");
           setToast("QA found a failure — session halted");
@@ -410,72 +412,97 @@ export function AppRoot() {
       const useReal = key.length > 0 && !key.startsWith(`${provider}-demo`) && !key.startsWith("sk-ant-demo");
 
       if (!useReal) {
-        runScriptedStream(userText, base, false);
+        runScriptedStream(userText, base, []);
         return;
       }
 
-      // Real orchestrator: stream the opening plan from the selected provider,
-      // then hand off to the scripted specialists for the rest of the run.
-      setAgents((prev) => ({
-        ...prev,
-        orchestrator: { state: "working", task: "Planning the build", tokens: 0 },
-      }));
-      setThinking("orchestrator");
-      setLiveOrchestrator(true);
+      // Live pipeline: orchestrator, then product. Each agent sees the
+      // previous agent's output as its briefing context.
+      const taskByRole: Record<LiveAgentRole, string> = {
+        orchestrator: "Planning the build",
+        product: "Writing the spec",
+      };
+      let contextText = "";
+      const ranRoles: AgentName[] = [];
 
-      const msgTs = base + 1;
-      setMessages((m) => [...m, { kind: "agent", agent: "orchestrator", text: "", ts: msgTs }]);
+      for (const role of LIVE_AGENT_ROLES) {
+        if (abortRef.current) return;
 
-      const ctrl = new AbortController();
-      fetchAbortRef.current = ctrl;
+        setAgents((prev) => ({
+          ...prev,
+          [role]: { state: "working", task: taskByRole[role], tokens: 0 },
+        }));
+        setThinking(role);
+        setLiveAgent(role);
 
-      try {
-        const res = await fetch("/api/orchestrate", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ provider, model, apiKey: key, prompt: userText }),
-          signal: ctrl.signal,
-        });
-        if (!res.ok || !res.body) {
-          const msg = await res.text().catch(() => "");
-          throw new Error(msg || `${res.status} ${res.statusText}`);
+        const msgTs = Date.now() + ranRoles.length + 1;
+        setMessages((m) => [...m, { kind: "agent", agent: role, text: "", ts: msgTs }]);
+
+        const ctrl = new AbortController();
+        fetchAbortRef.current = ctrl;
+
+        let resultText = "";
+        try {
+          const res = await fetch("/api/agent", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              provider,
+              model,
+              apiKey: key,
+              role,
+              prompt: userText,
+              ...(role === "orchestrator" ? {} : { context: contextText }),
+            }),
+            signal: ctrl.signal,
+          });
+          if (!res.ok || !res.body) {
+            const errText = await res.text().catch(() => "");
+            throw new Error(errText || `${res.status} ${res.statusText}`);
+          }
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let firstChunk = true;
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (firstChunk && value) {
+              // First byte arrived — move from thinking dots to live-streaming bubble.
+              setThinking(null);
+              firstChunk = false;
+            }
+            resultText += decoder.decode(value, { stream: true });
+            setMessages((m) =>
+              m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text: resultText } : msg)),
+            );
+          }
+          resultText += decoder.decode();
+          setMessages((m) =>
+            m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text: resultText } : msg)),
+          );
+        } catch (err) {
+          if ((err as Error).name === "AbortError") return;
+          const reason = err instanceof Error ? err.message : "request failed";
+          resultText = `[${role} call failed: ${reason}] — continuing with the rest of the crew.`;
+          setMessages((m) =>
+            m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text: resultText } : msg)),
+          );
+          setToast(`Live ${role} failed — continuing`);
+          setTimeout(() => setToast(null), 3200);
+        } finally {
+          fetchAbortRef.current = null;
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let text = "";
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          text += decoder.decode(value, { stream: true });
-          setMessages((m) => m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text } : msg)));
-        }
-        text += decoder.decode();
-        setMessages((m) => m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text } : msg)));
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        const reason = err instanceof Error ? err.message : "request failed";
-        setMessages((m) =>
-          m.map((msg) =>
-            msg.ts === msgTs && msg.kind === "agent"
-              ? { ...msg, text: `[orchestrator call failed: ${reason}] — falling back to scripted run.` }
-              : msg,
-          ),
-        );
-        setToast("Live orchestrator failed — running scripted mode");
-        setTimeout(() => setToast(null), 3200);
-      } finally {
-        fetchAbortRef.current = null;
+
+        setAgents((prev) => ({ ...prev, [role]: { ...prev[role], state: "done" } }));
+        setThinking(null);
+        ranRoles.push(role);
+        contextText = resultText;
       }
 
-      setAgents((prev) => ({
-        ...prev,
-        orchestrator: { ...prev.orchestrator, state: "done" },
-      }));
-      setThinking(null);
-      // Continue scripted fixture for the specialists. Keep the LIVE tag on
-      // so it's visually obvious the first turn was real.
+      setLiveAgent(null);
+      // Continue scripted fixture for the agents that didn't run live.
       const nextBase = Date.now();
-      runScriptedStream(userText, nextBase, true);
+      runScriptedStream(userText, nextBase, ranRoles);
     },
     [tweaks.provider, tweaks.modelByProvider, tweaks.streamSpeed, tweaks.scenario, apiKeys, runScriptedStream]
   );
@@ -578,7 +605,7 @@ export function AppRoot() {
                   toolEvents={toolEvents}
                   diffEvents={diffEvents}
                   thinking={thinking}
-                  liveAgent={liveOrchestrator ? "orchestrator" : null}
+                  liveAgent={liveAgent}
                   onSample={handleSample}
                   onSubmit={handleSubmit}
                   samples={SAMPLES}
