@@ -6,9 +6,9 @@ A browser-based builder where a team of specialist AI agents — orchestrator, p
 
 ## Status
 
-Early. The dashboard is real (Next.js 15 + React 19 + Tailwind v4), and every UI surface works end-to-end. The **Orchestrator now makes real LLM calls** via Vercel AI SDK against Anthropic, Google (Gemini), or xAI (Grok) — pick a provider, paste a key, run a prompt, and watch the opening plan stream back. The four specialists (Product, Mobile, Backend, QA) remain scripted for now. Today you can:
+Early. The dashboard is real (Next.js 15 + React 19 + Tailwind v4), and every UI surface works end-to-end. The **Orchestrator now makes real LLM calls** via Vercel AI SDK against Anthropic, Google (Gemini), or Groq (open models on LPU hardware — Llama 3.3, DeepSeek-R1 distill, Llama 3.1 Instant) — pick a provider, paste a key, run a prompt, and watch the opening plan stream back. The four specialists (Product, Mobile, Backend, QA) remain scripted for now. Today you can:
 
-- Pick a provider (Anthropic / Google / xAI) in the setup wizard, paste a key, and run a real Orchestrator turn
+- Pick a provider (Anthropic / Google / Groq) in the setup wizard, paste a key, and run a real Orchestrator turn
 - Stream the live opening message (a `LIVE` badge appears on the thinking chip)
 - Prompt the crew (todo, meditation, photo-journal are all wired with distinct scripted specialists)
 - Watch agents transition states, emit tool calls, write file diffs, and ship a preview
@@ -34,7 +34,7 @@ Open http://localhost:3000 and, in the setup wizard, pick a provider and paste a
 
 - **Anthropic** — [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) (`sk-ant-…`)
 - **Google** — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (`AIza…`)
-- **xAI** — [console.x.ai](https://console.x.ai) (`xai-…`)
+- **Groq** — [console.groq.com/keys](https://console.groq.com/keys) (`gsk_…`)
 
 Or click **try with demo key** to explore the fully scripted flow without hitting any provider. Describe an app in the chat; the Orchestrator replies live, and the specialists take it from there. Keys live in `localStorage` and are sent to the app's `/api/orchestrate` route in the request body for every call — not persisted server-side.
 
@@ -57,7 +57,7 @@ apps/web/                     Next.js 15 dashboard (client-heavy SPA)
       pages/                  sessions, agents, files, docs, settings
       icons.tsx               hand-rolled SVG icons
     lib/
-      providers.ts            Anthropic / Google / xAI registry, models, key metadata
+      providers.ts            Anthropic / Google / Groq registry, models, key metadata
       scripted-stream.ts      the 3 demo fixtures + pickScript dispatcher
       fmt.ts                  time / diff formatters
     types/
@@ -73,7 +73,7 @@ Full architecture spec lives in `docs/superpowers/specs/` (untracked; local only
 - **Theme**: OKLCH warm-black with a single amber accent. `prefers-reduced-motion` respected.
 - **No Zustand / TanStack**. Session state is plain `useState` + localStorage. The app is modest enough that adding a state library would be premature.
 - **Direct API over CLI runtimes**. Agents drive LLMs through Vercel AI SDK (Orchestrator is live today), not via shelling out to Claude Code / Codex. This is a deliberate research bet on multi-agent coordination.
-- **Multi-provider BYOK**. The Orchestrator speaks to Anthropic, Google, or xAI through `@ai-sdk/*` — the call site is identical across providers; only the factory import changes. Keys are per-provider and stored in `localStorage`.
+- **Multi-provider BYOK**. The Orchestrator speaks to Anthropic, Google, or Groq through `@ai-sdk/*` — the call site is identical across providers; only the factory import changes. Keys are per-provider and stored in `localStorage`.
 
 ## What's next
 

@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createXai } from "@ai-sdk/xai";
+import { createGroq } from "@ai-sdk/groq";
 import { z } from "zod";
 import { PROVIDERS, type ProviderId } from "@/lib/providers";
 
 export const runtime = "nodejs";
 
 const Body = z.object({
-  provider: z.enum(["anthropic", "google", "xai"]),
+  provider: z.enum(["anthropic", "google", "groq"]),
   model: z.string().min(1).max(80),
   apiKey: z.string().min(8).max(400),
   prompt: z.string().min(1).max(4000),
@@ -36,7 +36,7 @@ function modelFor(provider: ProviderId, model: string, apiKey: string) {
   }
   if (provider === "anthropic") return createAnthropic({ apiKey })(model);
   if (provider === "google") return createGoogleGenerativeAI({ apiKey })(model);
-  return createXai({ apiKey })(model);
+  return createGroq({ apiKey })(model);
 }
 
 export async function POST(req: Request) {
