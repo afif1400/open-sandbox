@@ -10,6 +10,13 @@ import type {
 } from "@/types/events";
 import { AGENT_ORDER } from "@/types/events";
 import { pickScript } from "@/lib/scripted-stream";
+import {
+  PROVIDERS,
+  PROVIDER_ORDER,
+  emptyKeyMap,
+  modelLabelFor,
+  type ProviderId,
+} from "@/lib/providers";
 import { ChatPane, type Sample } from "@/components/chat/chat-pane";
 import { PreviewPane, type Device, type PreviewMode } from "@/components/preview/preview-pane";
 import { InspectorPane, type InspectorTab } from "@/components/inspector/inspector-pane";
@@ -39,10 +46,14 @@ function initialAgents(): Record<AgentName, AgentInfo> {
   ) as Record<AgentName, AgentInfo>;
 }
 
+function hasAnyKey(keys: Record<ProviderId, string>): boolean {
+  return PROVIDER_ORDER.some((p) => keys[p]?.trim().length);
+}
+
 export function AppRoot() {
   const [hydrated, setHydrated] = useState(false);
 
-  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKeys, setApiKeys] = useState<Record<ProviderId, string>>(() => emptyKeyMap());
   const [route, setRoute] = useState<Route>("dashboard");
   const [sbCollapsed, setSbCollapsed] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -50,19 +61,39 @@ export function AppRoot() {
 
   // Hydrate from localStorage after mount
   useEffect(() => {
-    const k = localStorage.getItem("opencrew_api_key") || "";
+    // Per-provider keys. Migrate the legacy single-key entry into the anthropic slot.
+    const rawKeys = localStorage.getItem("opencrew_api_keys_v1");
+    let keys = emptyKeyMap();
+    if (rawKeys) {
+      try {
+        const parsed = JSON.parse(rawKeys) as Partial<Record<ProviderId, string>>;
+        for (const p of PROVIDER_ORDER) {
+          if (typeof parsed[p] === "string") keys[p] = parsed[p] as string;
+        }
+      } catch {
+        // malformed; keep empty
+      }
+    } else {
+      const legacy = localStorage.getItem("opencrew_api_key") || "";
+      if (legacy) keys = { ...keys, anthropic: legacy };
+    }
+    setApiKeys(keys);
+
     const r = (localStorage.getItem("opencrew_route") as Route | null) || "dashboard";
     const sb = localStorage.getItem("opencrew_sb_collapsed") === "1";
-    setApiKey(k);
     setRoute(r);
     setSbCollapsed(sb);
 
-    // Restore tweaks (theme, accent, scenario, model, etc.)
+    // Restore tweaks (theme, accent, scenario, provider, model, etc.)
     const savedTweaks = localStorage.getItem("opencrew_tweaks");
     if (savedTweaks) {
       try {
         const parsed = JSON.parse(savedTweaks);
-        setTweaks((prev) => ({ ...prev, ...parsed }));
+        setTweaks((prev) => ({
+          ...prev,
+          ...parsed,
+          modelByProvider: { ...prev.modelByProvider, ...(parsed.modelByProvider ?? {}) },
+        }));
       } catch {
         // malformed; ignore
       }
@@ -103,8 +134,8 @@ export function AppRoot() {
     setHydrated(true);
   }, []);
   useEffect(() => {
-    if (hydrated) localStorage.setItem("opencrew_api_key", apiKey);
-  }, [hydrated, apiKey]);
+    if (hydrated) localStorage.setItem("opencrew_api_keys_v1", JSON.stringify(apiKeys));
+  }, [hydrated, apiKeys]);
   useEffect(() => {
     if (hydrated) localStorage.setItem("opencrew_route", route);
   }, [hydrated, route]);
@@ -132,6 +163,7 @@ export function AppRoot() {
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [agents, setAgents] = useState<Record<AgentName, AgentInfo>>(() => initialAgents());
   const [thinking, setThinking] = useState<AgentName | null>(null);
+  const [liveOrchestrator, setLiveOrchestrator] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>(tweaks.defaultDevice);
   const [mode, setMode] = useState<PreviewMode>("web");
@@ -233,12 +265,15 @@ export function AppRoot() {
   const abortRef = useRef(false);
   const pausedRef = useRef(false);
   const pendingStepRef = useRef<null | (() => void)>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
   const resetSession = useCallback(() => {
     abortRef.current = true;
     pausedRef.current = false;
     pendingStepRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (fetchAbortRef.current) fetchAbortRef.current.abort();
+    fetchAbortRef.current = null;
     setSessionState("idle");
     setMessages([]);
     setToolEvents([]);
@@ -246,6 +281,7 @@ export function AppRoot() {
     setFeed([]);
     setAgents(initialAgents());
     setThinking(null);
+    setLiveOrchestrator(false);
     setPreviewUrl(null);
   }, []);
 
@@ -263,22 +299,22 @@ export function AppRoot() {
     if (fn) fn();
   }, []);
 
-  const runStream = useCallback(
-    (userText: string) => {
+  const runScriptedStream = useCallback(
+    (userText: string, baseTs: number, skipOrchestrator: boolean) => {
       abortRef.current = false;
       pausedRef.current = false;
       pendingStepRef.current = null;
-      setSessionState("running");
       const speed = parseFloat(tweaks.streamSpeed) || 1;
-      const base = Date.now();
-      setMessages([{ kind: "user", text: userText, ts: base }]);
+      let cursor = baseTs - Date.now();
+      const virtualTs = () => Date.now() + cursor;
 
-      const stream = pickScript(userText, tweaks.scenario);
-      let cursor = 0;
-      const virtualTs = () => base + cursor;
+      // Drop orchestrator events when the real API already produced the opener.
+      const raw = pickScript(userText, tweaks.scenario);
+      const stream = skipOrchestrator ? raw.filter((e) => !("agent" in e.event) || e.event.agent !== "orchestrator") : raw;
 
       const endSession = (reason: "done" | "error") => {
         setThinking(null);
+        setLiveOrchestrator(false);
         if (reason === "error") {
           setSessionState("error");
           setToast("QA found a failure — session halted");
@@ -291,7 +327,6 @@ export function AppRoot() {
       const step = (i: number) => {
         if (abortRef.current) return;
         if (i >= stream.length) {
-          // Decide whether this run ended happily or in an error state.
           const sawError = tweaks.scenario === "qa-fail";
           endSession(sawError ? "error" : "done");
           return;
@@ -303,8 +338,6 @@ export function AppRoot() {
         const apply = () => {
           if (abortRef.current) return;
           if (pausedRef.current) {
-            // Pause fired while the timer was waiting. Stash this same callback
-            // so resume can continue from here without losing the event.
             pendingStepRef.current = apply;
             return;
           }
@@ -361,6 +394,92 @@ export function AppRoot() {
     [tweaks.streamSpeed, tweaks.scenario]
   );
 
+  const runStream = useCallback(
+    async (userText: string) => {
+      abortRef.current = false;
+      pausedRef.current = false;
+      pendingStepRef.current = null;
+      setSessionState("running");
+      const base = Date.now();
+      setMessages([{ kind: "user", text: userText, ts: base }]);
+
+      const provider = tweaks.provider;
+      const model = tweaks.modelByProvider[provider];
+      const key = apiKeys[provider]?.trim() ?? "";
+      // Demo keys are placeholders — fall back to fully scripted.
+      const useReal = key.length > 0 && !key.startsWith(`${provider}-demo`) && !key.startsWith("sk-ant-demo");
+
+      if (!useReal) {
+        runScriptedStream(userText, base, false);
+        return;
+      }
+
+      // Real orchestrator: stream the opening plan from the selected provider,
+      // then hand off to the scripted specialists for the rest of the run.
+      setAgents((prev) => ({
+        ...prev,
+        orchestrator: { state: "working", task: "Planning the build", tokens: 0 },
+      }));
+      setThinking("orchestrator");
+      setLiveOrchestrator(true);
+
+      const msgTs = base + 1;
+      setMessages((m) => [...m, { kind: "agent", agent: "orchestrator", text: "", ts: msgTs }]);
+
+      const ctrl = new AbortController();
+      fetchAbortRef.current = ctrl;
+
+      try {
+        const res = await fetch("/api/orchestrate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ provider, model, apiKey: key, prompt: userText }),
+          signal: ctrl.signal,
+        });
+        if (!res.ok || !res.body) {
+          const msg = await res.text().catch(() => "");
+          throw new Error(msg || `${res.status} ${res.statusText}`);
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let text = "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value, { stream: true });
+          setMessages((m) => m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text } : msg)));
+        }
+        text += decoder.decode();
+        setMessages((m) => m.map((msg) => (msg.ts === msgTs && msg.kind === "agent" ? { ...msg, text } : msg)));
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        const reason = err instanceof Error ? err.message : "request failed";
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.ts === msgTs && msg.kind === "agent"
+              ? { ...msg, text: `[orchestrator call failed: ${reason}] — falling back to scripted run.` }
+              : msg,
+          ),
+        );
+        setToast("Live orchestrator failed — running scripted mode");
+        setTimeout(() => setToast(null), 3200);
+      } finally {
+        fetchAbortRef.current = null;
+      }
+
+      setAgents((prev) => ({
+        ...prev,
+        orchestrator: { ...prev.orchestrator, state: "done" },
+      }));
+      setThinking(null);
+      // Continue scripted fixture for the specialists. Keep the LIVE tag on
+      // so it's visually obvious the first turn was real.
+      const nextBase = Date.now();
+      runScriptedStream(userText, nextBase, true);
+    },
+    [tweaks.provider, tweaks.modelByProvider, tweaks.streamSpeed, tweaks.scenario, apiKeys, runScriptedStream]
+  );
+
   // Global shortcuts
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -402,9 +521,19 @@ export function AppRoot() {
   // Wait until localStorage hydration complete — avoids setup-wizard flicker
   if (!hydrated) return null;
 
-  if (!apiKey) {
-    return <SetupWizard onComplete={(k) => setApiKey(k)} />;
+  if (!hasAnyKey(apiKeys)) {
+    return (
+      <SetupWizard
+        onComplete={(provider, key) => {
+          setApiKeys((prev) => ({ ...prev, [provider]: key }));
+          setTweaks((prev) => ({ ...prev, provider }));
+        }}
+      />
+    );
   }
+
+  const activeModel = tweaks.modelByProvider[tweaks.provider];
+  const modelDisplay = `${PROVIDERS[tweaks.provider].short.toLowerCase()}·${modelLabelFor(tweaks.provider, activeModel)}`;
 
   return (
     <div className={`shell ${sbCollapsed ? "collapsed" : ""}`}>
@@ -449,10 +578,11 @@ export function AppRoot() {
                   toolEvents={toolEvents}
                   diffEvents={diffEvents}
                   thinking={thinking}
+                  liveAgent={liveOrchestrator ? "orchestrator" : null}
                   onSample={handleSample}
                   onSubmit={handleSubmit}
                   samples={SAMPLES}
-                  modelLabel={`claude-${tweaks.defaultModel}`}
+                  modelLabel={modelDisplay}
                 />
               </div>
               <div
@@ -497,14 +627,18 @@ export function AppRoot() {
           {route === "docs" && <DocsPage />}
           {route === "settings" && (
             <SettingsPage
-              apiKey={apiKey}
-              setApiKey={setApiKey}
+              apiKeys={apiKeys}
+              setApiKey={(p, v) => setApiKeys((prev) => ({ ...prev, [p]: v }))}
               notifications={notifications}
               setNotifications={setNotifications}
               autosave={autosave}
               setAutosave={setAutosave}
-              defaultModel={tweaks.defaultModel}
-              setDefaultModel={(v) => setTweak("defaultModel", v)}
+              provider={tweaks.provider}
+              setProvider={(p) => setTweak("provider", p)}
+              modelByProvider={tweaks.modelByProvider}
+              setModel={(p, m) =>
+                setTweak("modelByProvider", { ...tweaks.modelByProvider, [p]: m })
+              }
               onReset={resetSession}
               onExport={exportSession}
             />

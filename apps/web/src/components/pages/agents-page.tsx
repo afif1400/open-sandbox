@@ -40,7 +40,7 @@ export function AgentsPage() {
               <div className="kv">
                 <div className="k">Model</div>
                 <div className="v mono" style={{ fontSize: 13 }}>
-                  sonnet-4-5
+                  active provider
                 </div>
               </div>
               <div className="kv">

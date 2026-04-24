@@ -13,6 +13,7 @@ export function ChatPane({
   toolEvents,
   diffEvents,
   thinking,
+  liveAgent,
   onSample,
   onSubmit,
   samples,
@@ -22,6 +23,7 @@ export function ChatPane({
   toolEvents: ToolEntry[];
   diffEvents: DiffEntry[];
   thinking: AgentName | null;
+  liveAgent: AgentName | null;
   onSample: (text: string) => void;
   onSubmit: (text: string) => void;
   samples: Sample[];
@@ -97,6 +99,7 @@ export function ChatPane({
               <div className="turn agent">
                 <div className="meta">
                   <span className="chip">{AGENT_LABEL[thinking]}</span>
+                  {liveAgent === thinking && <span className="chip live">● LIVE</span>}
                 </div>
                 <div className="thinking">
                   <span className="d" />
