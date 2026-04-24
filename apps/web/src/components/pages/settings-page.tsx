@@ -1,72 +1,159 @@
 "use client";
 import { useState } from "react";
+import { PROVIDERS, PROVIDER_ORDER, type ProviderId } from "@/lib/providers";
 
-export type ModelId = "sonnet-4-5" | "opus-4" | "haiku-4-5";
+function mask(key: string): string {
+  if (!key) return "not set";
+  if (key.length <= 14) return `${key.slice(0, 4)}…`;
+  return `${key.slice(0, 10)}…${key.slice(-4)}`;
+}
+
+function KeyRow({
+  providerId,
+  active,
+  currentKey,
+  onSave,
+  onMakeActive,
+}: {
+  providerId: ProviderId;
+  active: boolean;
+  currentKey: string;
+  onSave: (v: string) => void;
+  onMakeActive: () => void;
+}) {
+  const info = PROVIDERS[providerId];
+  const [staged, setStaged] = useState("");
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="setting-row">
+      <div className="k">
+        <span className="row">
+          {info.label}
+          {active && (
+            <span
+              style={{
+                marginLeft: 8,
+                padding: "2px 6px",
+                border: "1px solid var(--border)",
+                borderRadius: 4,
+                fontFamily: "var(--mono)",
+                fontSize: 10,
+                letterSpacing: 0.4,
+                textTransform: "uppercase",
+                color: "var(--agent-done)",
+              }}
+            >
+              active
+            </span>
+          )}
+        </span>
+        <span className="s">{info.keyHint}</span>
+      </div>
+      <div className="v">
+        <input
+          value={staged}
+          onChange={(e) => setStaged(e.target.value)}
+          placeholder={info.keyPlaceholder}
+          type="password"
+        />
+        <div className="help">current: {mask(currentKey)}</div>
+        <div className="row">
+          <button
+            className="btn-prim"
+            disabled={!staged.trim()}
+            onClick={() => {
+              onSave(staged.trim());
+              setStaged("");
+              setSaved(true);
+              setTimeout(() => setSaved(false), 2000);
+            }}
+          >
+            save key
+          </button>
+          {!active && (
+            <button className="btn-ghost" onClick={onMakeActive} disabled={!currentKey.trim()}>
+              make active
+            </button>
+          )}
+          {saved && (
+            <span style={{ color: "var(--agent-done)", fontFamily: "var(--mono)", fontSize: 11 }}>
+              ✓ saved
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage({
-  apiKey,
+  apiKeys,
   setApiKey,
   notifications,
   setNotifications,
   autosave,
   setAutosave,
-  defaultModel,
-  setDefaultModel,
+  provider,
+  setProvider,
+  modelByProvider,
+  setModel,
   onReset,
   onExport,
 }: {
-  apiKey: string;
-  setApiKey: (v: string) => void;
+  apiKeys: Record<ProviderId, string>;
+  setApiKey: (p: ProviderId, v: string) => void;
   notifications: boolean;
   setNotifications: (v: boolean) => void;
   autosave: boolean;
   setAutosave: (v: boolean) => void;
-  defaultModel: ModelId;
-  setDefaultModel: (v: ModelId) => void;
+  provider: ProviderId;
+  setProvider: (p: ProviderId) => void;
+  modelByProvider: Record<ProviderId, string>;
+  setModel: (p: ProviderId, m: string) => void;
   onReset: () => void;
   onExport: () => void;
 }) {
-  const [key, setKey] = useState(apiKey || "");
-  const [saved, setSaved] = useState(false);
+  const activeModel = modelByProvider[provider];
   return (
     <div className="page-content">
       <h1>Settings</h1>
       <div className="sub">Keys, preferences, and workspace configuration.</div>
       <div className="card">
-        <h3>API key</h3>
-        <div className="desc">Anthropic API key. Stored in this browser only — never sent to our servers.</div>
+        <h3>Providers &amp; keys</h3>
+        <div className="desc">
+          Bring your own key. Stored in this browser and sent only in the request body when the Orchestrator calls the provider.
+        </div>
+        {PROVIDER_ORDER.map((p) => (
+          <KeyRow
+            key={p}
+            providerId={p}
+            active={p === provider}
+            currentKey={apiKeys[p] ?? ""}
+            onSave={(v) => setApiKey(p, v)}
+            onMakeActive={() => setProvider(p)}
+          />
+        ))}
+      </div>
+      <div className="card">
+        <h3>Model</h3>
+        <div className="desc">
+          What the live Orchestrator calls. The other specialists are scripted for now.
+        </div>
         <div className="setting-row">
           <div className="k">
-            Anthropic key<span className="s">Every agent call uses this. Costs land on your Anthropic bill.</span>
+            {PROVIDERS[provider].label} model
+            <span className="s">
+              Your {PROVIDERS[provider].label} account determines which of these you can actually use.
+            </span>
           </div>
           <div className="v">
-            <input
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="sk-ant-api03-…"
-              type="password"
-            />
-            <div className="help">
-              Current: {apiKey ? `${apiKey.slice(0, 10)}…${apiKey.slice(-4)}` : "not set"}
-            </div>
-            <div className="row">
-              <button
-                className="btn-prim"
-                onClick={() => {
-                  setApiKey(key);
-                  setSaved(true);
-                  setTimeout(() => setSaved(false), 2000);
-                }}
-                disabled={!key.trim()}
-              >
-                save key
-              </button>
-              {saved && (
-                <span style={{ color: "var(--agent-done)", fontFamily: "var(--mono)", fontSize: 11 }}>
-                  ✓ saved
-                </span>
-              )}
-            </div>
+            <select value={activeModel} onChange={(e) => setModel(provider, e.target.value)}>
+              {PROVIDERS[provider].models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -89,19 +176,6 @@ export function SettingsPage({
           </div>
           <div className="v">
             <div className={`switch ${autosave ? "on" : ""}`} onClick={() => setAutosave(!autosave)} />
-          </div>
-        </div>
-        <div className="setting-row">
-          <div className="k">
-            Default model
-            <span className="s">What new sessions start with. Override per-session later.</span>
-          </div>
-          <div className="v">
-            <select value={defaultModel} onChange={(e) => setDefaultModel(e.target.value as ModelId)}>
-              <option value="sonnet-4-5">claude-sonnet-4-5</option>
-              <option value="opus-4">claude-opus-4</option>
-              <option value="haiku-4-5">claude-haiku-4-5</option>
-            </select>
           </div>
         </div>
       </div>
