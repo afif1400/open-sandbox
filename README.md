@@ -6,10 +6,10 @@ A browser-based builder where a team of specialist AI agents — orchestrator, p
 
 ## Status
 
-Early. The dashboard is real (Next.js 15 + React 19 + Tailwind v4), and every UI surface works end-to-end. The **Orchestrator now makes real LLM calls** via Vercel AI SDK against Anthropic, Google (Gemini), or Groq (open models on LPU hardware — Llama 3.3, DeepSeek-R1 distill, Llama 3.1 Instant) — pick a provider, paste a key, run a prompt, and watch the opening plan stream back. The four specialists (Product, Mobile, Backend, QA) remain scripted for now. Today you can:
+Early. The dashboard is real (Next.js 15 + React 19 + Tailwind v4), and every UI surface works end-to-end. The **Orchestrator and Product now make real LLM calls** via Vercel AI SDK against Anthropic, Google (Gemini), or Groq (open models on LPU hardware — Llama 3.3, DeepSeek-R1 distill, Llama 3.1 Instant). Pick a provider, paste a key, run a prompt: the Orchestrator produces a plan, hands off to Product, and Product streams back an implementable spec. Mobile, Backend, and QA remain scripted for now. Today you can:
 
-- Pick a provider (Anthropic / Google / Groq) in the setup wizard, paste a key, and run a real Orchestrator turn
-- Stream the live opening message (a `LIVE` badge appears on the thinking chip)
+- Pick a provider (Anthropic / Google / Groq) in the setup wizard, paste a key, and run a real Orchestrator + Product turn
+- Stream both live messages with a `LIVE` badge on the current agent's bubble
 - Prompt the crew (todo, meditation, photo-journal are all wired with distinct scripted specialists)
 - Watch agents transition states, emit tool calls, write file diffs, and ship a preview
 - Pause / resume mid-stream, stop and restart, trigger a scripted QA-failure scenario
@@ -17,7 +17,7 @@ Early. The dashboard is real (Next.js 15 + React 19 + Tailwind v4), and every UI
 - Tweak provider, model, accent, chat density, device, stream speed, and the scenario live
 - Use ⌘K for the command palette, ⌘B for sidebar, ⌘⏎ to send, `?` for the full shortcut list
 
-What you cannot yet do: actually have the _specialists_ write real code to a real sandbox. That's the next plan.
+What you cannot yet do: have Mobile / Backend / QA actually write real code to a real sandbox. That's the next plan.
 
 ## Quickstart
 
@@ -45,7 +45,7 @@ This monorepo currently contains one workspace.
 ```
 apps/web/                     Next.js 15 dashboard (client-heavy SPA)
   app/                        App Router entrypoints + globals.css
-    api/orchestrate/          Live Orchestrator route — POST { provider, model, apiKey, prompt }
+    api/agent/                Live agent route — POST { provider, model, apiKey, role, prompt, context? } streams text
   src/
     components/
       app-root.tsx            Root client component; holds all session state
@@ -58,6 +58,7 @@ apps/web/                     Next.js 15 dashboard (client-heavy SPA)
       icons.tsx               hand-rolled SVG icons
     lib/
       providers.ts            Anthropic / Google / Groq registry, models, key metadata
+      agent-prompts.ts        Per-role system prompts + briefing composer for live agents
       scripted-stream.ts      the 3 demo fixtures + pickScript dispatcher
       fmt.ts                  time / diff formatters
     types/
@@ -79,7 +80,7 @@ Full architecture spec lives in `docs/superpowers/specs/` (untracked; local only
 
 In rough order of usefulness:
 
-1. **Real specialist agents** — the Orchestrator now runs live; the next step is Product, then Mobile / Backend / QA on AI SDK tool loops coordinating through shared spec files.
+1. **Real specialist agents** — the Orchestrator and Product now run live; the next step is Mobile / Backend / QA on AI SDK tool loops, coordinating through shared spec files and eventually a sandboxed workspace.
 2. **Sandbox adapter** — Docker (local) and gVisor-backed Docker (production self-host) as first implementations.
 3. **Real preview** — Expo Web from the sandbox proxied into the iframe.
 4. **Supabase agent** — real migrations, RLS, and edge functions from the backend specialist.

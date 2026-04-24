@@ -5,6 +5,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { z } from "zod";
 import { PROVIDERS, type ProviderId } from "@/lib/providers";
+import { AGENT_PROMPTS, composePrompt } from "@/lib/agent-prompts";
 
 export const runtime = "nodejs";
 
@@ -12,23 +13,10 @@ const Body = z.object({
   provider: z.enum(["anthropic", "google", "groq"]),
   model: z.string().min(1).max(80),
   apiKey: z.string().min(8).max(400),
+  role: z.enum(["orchestrator", "product"]),
   prompt: z.string().min(1).max(4000),
+  context: z.string().max(12000).optional(),
 });
-
-const SYSTEM = `You are the Orchestrator, the lead agent in a crew of AI specialists building a mobile app for the user.
-
-Specialists you route work to:
-- Product: shapes screens, data model, and user flows
-- Mobile: writes React Native and Expo code
-- Backend: runs Supabase migrations, row-level security, and edge functions
-- QA: typecheck, lint, and smoke tests
-
-Respond in 2–4 short paragraphs, calm and technical. No emojis, no headers, no bullet points.
-1. Restate the user's ask in your own words, including the core data model and screens.
-2. Call out any non-obvious decision or assumption.
-3. Hand off to the specialists, naming who owns what.
-
-Aim for ~180 words. Talk to the user and to your crew — not a customer pitch.`;
 
 function modelFor(provider: ProviderId, model: string, apiKey: string) {
   if (!PROVIDERS[provider].models.some((m) => m.id === model)) {
@@ -50,16 +38,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // streamText swallows provider errors into the fullStream rather than
-  // throwing, so walk the parts ourselves and surface errors to the client as
-  // readable text (rather than closing the response with an empty body).
   let capturedError: unknown = null;
   let result: ReturnType<typeof streamText>;
   try {
     result = streamText({
       model: modelFor(body.provider, body.model, body.apiKey),
-      system: SYSTEM,
-      prompt: body.prompt,
+      system: AGENT_PROMPTS[body.role],
+      prompt: composePrompt(body.role, body.prompt, body.context),
       onError: ({ error }) => {
         capturedError = error;
       },
@@ -69,6 +54,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
+  // streamText swallows provider errors into fullStream rather than throwing,
+  // so walk the parts ourselves and surface errors as readable text rather
+  // than closing the response with an empty body on a 401.
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

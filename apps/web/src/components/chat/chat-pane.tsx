@@ -91,7 +91,10 @@ export function ChatPane({
         <div className="chat-body" ref={streamRef} onScroll={onStreamScroll}>
           <div className="chat-list">
             {timeline.map((item) => {
-              if (item.kind === "msg") return <Bubble key={item.id} {...item.data} />;
+              if (item.kind === "msg") {
+                const live = item.data.kind === "agent" && item.data.agent === liveAgent;
+                return <Bubble key={item.id} {...item.data} live={live} />;
+              }
               if (item.kind === "tool") return <ToolCard key={item.id} {...item.data} />;
               return <DiffCard key={item.id} {...item.data} />;
             })}
