@@ -1,4 +1,4 @@
-export type ProviderId = "anthropic" | "google" | "xai";
+export type ProviderId = "anthropic" | "google" | "groq";
 
 export type ModelOption = {
   id: string;
@@ -17,7 +17,7 @@ export type ProviderInfo = {
   models: ModelOption[];
 };
 
-export const PROVIDER_ORDER: ProviderId[] = ["anthropic", "google", "xai"];
+export const PROVIDER_ORDER: ProviderId[] = ["anthropic", "google", "groq"];
 
 export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
   anthropic: {
@@ -48,18 +48,18 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
       { id: "gemini-2.5-flash-lite", label: "gemini-2.5-flash-lite", subtitle: "fastest" },
     ],
   },
-  xai: {
-    id: "xai",
-    label: "xAI",
-    short: "XAI",
-    keyPlaceholder: "xai-…",
-    keyHint: "console.x.ai → API keys",
-    keyDocsUrl: "https://console.x.ai/team/default/api-keys",
-    defaultModel: "grok-4",
+  groq: {
+    id: "groq",
+    label: "Groq",
+    short: "GRQ",
+    keyPlaceholder: "gsk_…",
+    keyHint: "console.groq.com → API keys",
+    keyDocsUrl: "https://console.groq.com/keys",
+    defaultModel: "llama-3.3-70b-versatile",
     models: [
-      { id: "grok-4", label: "grok-4", subtitle: "most capable" },
-      { id: "grok-3", label: "grok-3", subtitle: "balanced" },
-      { id: "grok-3-mini", label: "grok-3-mini", subtitle: "fastest" },
+      { id: "llama-3.3-70b-versatile", label: "llama-3.3-70b-versatile", subtitle: "most capable" },
+      { id: "deepseek-r1-distill-llama-70b", label: "deepseek-r1-distill-llama-70b", subtitle: "reasoning" },
+      { id: "llama-3.1-8b-instant", label: "llama-3.1-8b-instant", subtitle: "fastest" },
     ],
   },
 };
